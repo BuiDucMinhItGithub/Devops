@@ -1,0 +1,85 @@
+image: 'docker'
+services:
+  - docker:dind
+stages:
+    - build
+    - deploy-test
+    #- deploy-staging
+   # - deploy-master
+build:
+    stage: build
+    script:
+      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+      - docker build -t $CI_REGISTRY_IMAGE .
+      - docker push $CI_REGISTRY_IMAGE
+deploy-staging:
+  stage: deploy-staging
+  only:
+    - develop
+  except:
+    - master
+  script:
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - ssh-keyscan -H $SSH_STAGING_IP >> ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/known_hosts
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "sudo apt update"
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "sudo apt install docker.io -y"
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "echo $CI_REGISTRY_PASSWORD | sudo docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin"
+    - pwd && ls -la
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "rm -rf docker-compose.yml"
+    - scp docker-compose.yml ubuntu@$SSH_STAGING_IP:/home/ubuntu/
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "pwd && ls -la"
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "sudo docker-compose down"
+    - ssh ${SSH_USER}@${SSH_STAGING_IP} "echo 'sudo docker-compose up -d' | bash -s &"
+deploy-master:
+  stage: deploy-master
+  only:
+    - master
+  except:
+    - develop
+  script:
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - ssh-keyscan -H $SSH_SERVER_IP_TEST >> ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/known_hosts
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "sudo apt update"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "sudo apt install docker.io -y"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "echo $CI_REGISTRY_PASSWORD | sudo docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin"
+    - pwd && ls -la
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "rm -rf docker-compose.yml"
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - ssh-keyscan -H $SSH_WORKER_IP >> ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/known_hosts
+    - ssh ${SSH_USER}@${SSH_WORKER_IP} "echo 'docker swarm join --token SWMTKN-1-3v488wjxl53pui2dwigss3yenoelsz6craecmbmycqdu2mzxxo-8f49eprumb0tjsvdly9jsggel 10.32.2.226:2377' | bash -s &"
+    - scp docker-compose-v2.yml ubuntu@$SSH_SERVER_IP_TEST:/home/ubuntu/
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "pwd && ls -la"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "echo 'sudo docker stack deploy --compose-file docker-compose-v2.yml stackpython' | bash -s &"
+deploy-test:
+  only:
+  - develop
+  stage: deploy-test
+  script:
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - ssh-keyscan -H $SSH_SERVER_IP_TEST >> ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/known_hosts
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "echo $CI_REGISTRY_PASSWORD | sudo docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin"
+    - pwd && ls -la
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "rm -rf /home/ubuntu/"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "mkdir -p /home/ubuntu/"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "rm -rf /home/ubuntu/docker-compose.yml"
+    - scp docker-compose.yml ubuntu@$SSH_SERVER_IP_TEST:/home/ubuntu/docker-compose.yml
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "cd /home/ubuntu/ && pwd && ls -la"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "sed -i 's/__TAG__/dev/g' /home/ubuntu/docker-compose.yml"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "cd /home/ubuntu/ && sudo docker compose down"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "cd /home/ubuntu/ && sudo docker compose up -d"
