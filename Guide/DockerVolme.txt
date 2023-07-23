@@ -1,0 +1,44 @@
+https://github.com/xzhoang/awss3.git
+Kiểm tra trên máy EC2 đã có docker image nodejs để chạy luôn không:
+docker images
+Tuy chưa có nhưng vẫn có thể khởi chạy container có sẵn nodejs bằng cách lấy image node:14 từ docker hub về, chạy và map volume từ thư mục $HOME/nodes3 hiện tại trên máy host vào thư mục /home/data trên Container:
+docker run -it  -v $HOME/nodes3:/home/data  --name nodejsweb -p 80:3000 node:14 /bin/bash
+Sau khi vào container rồi thì chạy lệnh cài đặt các gói thư viện:
+npm install
+và chạy App bằng lệnh:
+node app.js
+Test truy cập từ Internet với IP máy EC2 host thấy output ra màn hình log có người truy cập đến.
+Ấn tổ hợp phím (Ctrl P + Ctrl Q) để thoát khỏi container nhưng container vẫn chạy.
+Sau khi thoát ra ngoài máy host, kiểm tra xem container còn chạy không:
+docker ps –a
+Và edit thử file views từ máy host EC2 để xem thay đổi nội dung trang web trong container:
+cd   $HOME/nodes3
+nano views/index.ejs
+Sửa cụm từ: Minitool to upload file to S3 thành : Custom tool upload file to S3
+Sau đó truy cập lại website để thấy thay đổi. (Thực tế edit bằng Visual studio code chẳng hạn)
+Việc map (ánh xạ) trực tiếp thư mục máy host vào container để sửa code thường được sử dụng trong quá trình viết App. Khi đã viết hoàn chỉnh muốn đưa thực tế sử dụng thì sẽ COPY code từ máy host vào trong Container luôn. Chỉ có phần lưu DB thì thường sẽ được map ra ngoài.
+Để backup dữ liệu trong volume của container, thông thường sẽ khởi động một container khác cùng sử dụng volume đó với contaner thư nhất, nhưng chỉ chạy chức năng backup dữ liệu volume đó sang một nơi lưu trữ khác.
+Volume đã map vào một container có thể tiếp tục chia sẻ cho các container khác. VD tạo container thứ 2 cũng sử dụng cùng volume như container đã tạo ở trên:
+docker run -it  --volumes-from nodejsweb -v $HOME/backup:/home/backup node:14 /bin/bash
+Container thứ 2 này không mở cổng nào (-p) mà mount thêm thư mục backup trên máy host vào container thứ 2, ngoài các volume mount chia sẻ với container 1.
+Trên container thứ 2 kiểm tra cacs mount point:
+Findmnt
+Sẽ thấy mount cả 2 volume: /home/data và /home/backup
+Tiến hành backup dữ liệu (có thể lập crontab trong container để backup định kỳ):
+tar –cvf /home/backup/backupdata32022.tar  /home/data
+Thoát khỏi container và kiểm tra trên máy host:
+ls $HOME/backup
+
+Nếu không mount thư mục trên máy host vào container, có thể tạo docker volume rồi mới mount vào container:
+docker volume create nodeCode
+sudo ls /var/lib/docker/volumes        // Xem thư mục chưa volume ở đâu
+docker volume ls
+docker volume inspect nodeCode
+Thực hiện restore dữ liệu đã backup vào container mới:
+Mount volume đã tạo vào container mới, đồng thời mount cả thư mục /backup trên máy host:
+docker run -it  --mount source=nodeCode,target=/home/datacode -v $HOME/backup:/home/backup node:14 /bin/bash
+Sau đó giải nén để restore file tar sang volume mới:
+cd /home/backup 
+ls
+tar –xvf backupdata32022.tar  -C /home/datacode  --strip 1
+kiểm tra lại dữ liệu đã giải nén.

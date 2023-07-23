@@ -1,0 +1,17 @@
+Aws
+IAM
+VPC
+EC2 (Bastion Host, Session Management, ClientVPN)
+Load Balancing
+S3 (Lưu, thay đổi quyền, Bật version)
+RDS
+CLoudFront
+
+
+Tạo git server có tồn tại Container Registry và Package Registry
+Cấu hình Gilab truy cập bằng LDAP uer
+Cấu hình gitlab có certificate bảo mật truy cập từ những nguồn xác định (Private Gitlab Server)
+
+Tự cấu hình và tạo image
+Push image đã tạo lên DockerHub
+Tạo 2 container chạy song song và ping sang nhau khi chỏ cùng 1 loại switch

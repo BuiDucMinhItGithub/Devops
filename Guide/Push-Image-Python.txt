@@ -1,0 +1,46 @@
+Chuẩn bị:  Logon vào Gitlab và tạo Project : pythonapp
+Trên máy EC2 của mình tạo thư mục: pythonapp gồm các file sau (như bài trước):
+app.py
+requirements.txt
+flask
+redis
+Dockerfile
+FROM python:3.4-alpine
+ADD . /code
+WORKDIR /code
+RUN pip install -r requirements.txt
+CMD ["python", "app.py"]
+
+Chỉnh sửa file app.py để không dùng service redis nữa cho đơn giản:
+from flask import Flask
+from redis import Redis
+
+app = Flask(__name__)
+#redis = Redis(host='redis', port=6379)
+redis=202
+
+@app.route('/')
+def hello():
+    #count = redis.incr('hits')
+    count =112
+    return 'Hello World! I have been seen {} times.\n'.format(count)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)
+Lưu lại và Push lên Gitlab:
+git add .
+git commit –m “Change app.py – remove redis ”
+git push origin 
+Vào trang web Gitlab, vào Project vừa tạo: pythonapp, tìm mục CI/CD -> pineline
+Chọn thêm file  .gitlab-ci.yml theo template bất kỳ, sau đó xóa hết nội dung đi và viết lại như sau:
+appproject:
+  image: docker
+  services:
+    - docker:dind
+  script:
+    - env  
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin                           //Chú ý dòng này là kéo dài của dòng trên, không phải dòng mới
+    - docker build -t $CI_REGISTRY_IMAGE .
+    - docker push $CI_REGISTRY_IMAGE
+Chú ý các biến môi trường là có sẵn của GITLab, và do sau khi tạo xong image cũng push lên Registry của Gitlab luôn nên các biến này sẽ lấy giá trị mặc định do Gitlab quy định.
+Ấn chọn Commit phía cuối trang để tạo ra Commit mới

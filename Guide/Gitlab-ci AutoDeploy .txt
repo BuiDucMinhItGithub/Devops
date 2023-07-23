@@ -1,0 +1,29 @@
+image: docker
+  services:
+    - docker:dind
+  stages:
+    - build
+    - deploy
+  build:
+    stage: build
+    script:
+      - env
+      - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+      - docker build -t $CI_REGISTRY_IMAGE .
+      - docker push $CI_REGISTRY_IMAGE
+  deploy:
+  stage: deploy
+  script:
+    - eval $(ssh-agent -s)
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - ssh-keyscan -H $SSH_SERVER_IP_TEST >> ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/known_hosts
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "echo $CI_REGISTRY_PASSWORD | sudo docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin"
+    - pwd && ls -la
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "rm -rf docker-compose.yml"
+    - scp docker-compose.yml ubuntu@$SSH_SERVER_IP_TEST:/home/ubuntu/
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "pwd && ls -la"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "sudo docker-compose down"
+    - ssh ${SSH_USER}@${SSH_SERVER_IP_TEST} "echo 'sudo docker-compose up -d' | bash -s &"

@@ -1,0 +1,71 @@
+--------------------------------------------------------------------------------------
+Frontend + Backend kết nối với nhau
+npm install ______
+
+Tạo instance public subnet cho BE
+Chạy sudo apt-get update để cập nhật
+Chạy npm install 
+Clone project backend tại link https://gitlab.com/xzhoang/nodejsmysql
+Cài mysql trên instance BE
+Sửa đưuòng dẫn trong file server.js của project BE chỉ vào DB
+Chay BE thành service = cách cấu hình sudo nano /etc/systemd/system/nodeserver.service
+which node de lay duong dan node
+cd nodejsmysql chay pwd de lay duong dan backend
+
+[Unit]
+Description=frontend service
+[Service]
+ExecStart=/usr/bin/node   /home/ubuntu/nodejsmysql/server.js
+Restart=always
+# Restart service after 10 seconds if node service crashes
+RestartSec=10
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=nodejs-webPNH
+User=ubuntu
+Group=1000
+Environment=NODE_ENV=production PORT=3000
+[Install]
+WantedBy=multi-user.target
+
+sudo systemctl enable nodeserver.js
+=> Chạy BE lên rồi truy cập theo ip public trên trình duyệt = lệnh node server.js
+
+----------------------------------------------
+
+Tạo instance FE cùng public subnet
+Clone project FE tại link https://gitlab.com/xzhoang/frontend
+Chỉnh sửa file = lệnh sudo nano /etc/systemd/system/ft.service với nội dung sau
+which node
+pwd trong frontend
+
+[Unit]
+Description=Node.js PNH web Server
+[Service]
+WorkingDirectory=/home/ubuntu/frontend/
+ExecStart=/usr/bin/npm start
+Restart=always
+# Restart service after 10 seconds if node service crashes
+RestartSec=10
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=nodejs-webPNH
+User=ubuntu
+Group=1000
+Environment=NODE_ENV=production PORT=3000
+[Install]
+WantedBy=multi-user.target
+
+Tiến hành chạy ứng dụng bằng service 
+sudo systemctl enable ft.service 
+sudo systemctl start ft.service 
+sudo systemctl status ft.service 
+Sau đó reboot lại instance và chạy lại rồi truy cập ip public trên trình duyệt 
+
+
+Khi de load balancer la internal se khong truy cap duoc qua trinh duyet ma chi duoc curl
+
+--------------------------------------------------------------------------------------
+Chú ý đều để ở public còn khi auto scale sẽ cho vào private

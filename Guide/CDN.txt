@@ -1,0 +1,9 @@
+Tạo instance BE và FE kết nối với nhau để hiển thị ra view với data
+Tạo 1 bucket s3, cấu hình policy để cho phép getObject
+Upload ảnh lên s3
+-----------------------------------------
+Truy cập Cloud Front và tạo mới distribution
+Domain chọn phần s3 mới tạo 
+Sau khi aoj xong lấy đường dẫn của CDN và thêm /tên ảnh lưu trong s3 vào tag img trong 
+instance FE 
+Try cập FE trên trình duyệt xem link ảnh sẽ là link CloudFront

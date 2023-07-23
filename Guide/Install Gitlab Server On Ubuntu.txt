@@ -1,0 +1,10 @@
+Tạo một EC2, hệ điều hành chọn ubuntu và phiên bản 20 (Lưu ý)
+Kết nối đến EC2
+Chạy sudo apt-get update để update
+Chạy sudo apt-get install -y curl openssh-server ca-certificates tzdata perl để cài đặt certificate về phần bảo mật
+Chạy curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash để thêm những gói package cài đặt vào gitlab
+Chạy sudo EXTERNAL_URL="https://gitlabservername.domain" apt-get install gitlab-ce để cài đặt gitlab server theo domain của mình
+	Lưu ý: Domain được cấp và thay domain vào đường dẫn
+Kiểm tra EC2 tạo có mở cổng https không
+Đợi khi cài xong sẽ truy cập https:// gitlabservername.domainname với user là root
+Mật khẩu đăng nhập lấy trong file = cách chạy sudo cat /etc/gitlab/initial_root_password

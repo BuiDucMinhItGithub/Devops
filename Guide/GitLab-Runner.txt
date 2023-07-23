@@ -1,0 +1,23 @@
+Chạy script để update và cài repository:
+sudo curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
+Sau đó tiền hành cài đặt:
+sudo apt install gitlab-runner
+Kiểm tra lại:
+gitlab-runner –version
+sudo gitlab-runner start
+
+Đăng ký Gitlab Runner với Gitlab Server: Thao tác trên Project của mình:
+Vào Gitlab -> Setting -> CICD -> Runners -> Expand -> Ấn nút: Show runner instalation instruction
+Thấy hướng dẫn đăng ký Runner với Gitab Server: (phần cài đặt đã làm rồi):
+sudo gitlab-runner register --url https://gitlab.com/ --registration-token $REGISTRATION_TOKEN
+Lựa chọn các thông số mặc định cho đến câu hỏi: Enter an executor: thì gõ docker tức là mặc định, Gitlab server sẽ yêu cầu Gitlab Runner này chạy các docker container.
+ Câu hỏi tiếp theo là: Enter the default Docker image  thì chọn image có tên là docker:dind luôn. 
+Thông báo đăng ký xong Gitlab runner
+Trên máy chạy Gitlab Runner:
+Để cho phép Gitlan Runner chạy lệnh Docker bên trong Docker container thì phải chỉnh cấu hình file (vi /etc/gitlab-runner/config.toml) cho phép các docker container chạy ở chế độ privileged mode và mount /var/run/docker.sock như một volume vào Container, để container có thể gọi lệnh docker 
+[[runners]]                      // Chú ý đến ID của Runner
+  executor = "docker"
+  [runners.docker]
+    privileged = true                      //Tìm mục này và chuyển thành true 
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
+Chú ý: Phải chạy lệnh Join trên Gitlab Runner này, rồi mới chỉnh file config.toml như trên để cấu hình file toml vào đúng ID của Runner trên Gitlab

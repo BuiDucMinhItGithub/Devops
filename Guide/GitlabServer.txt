@@ -1,0 +1,11 @@
+Cài đặt Gitlab lên máy Ubuntu EC2 (bản 20.04 trở xuống): t3 medium
+sudo apt-get update
+sudo apt-get install -y curl openssh-server ca-certificates tzdata perl
+Thêm GitLab repo và các gói cài đặt GitLab:
+curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash
+Tiến hành cài đặt sử dụng giao thức https (GitLab sẽ tự lấy chứng chỉ số Let’s Encrypt nếu domain trỏ đúng. Ở đây cần đưa IP public và tên để giáo viên tạo subdomain:
+sudo EXTERNAL_URL="https://gitlabTung.ccnapnh.fun" apt-get install gitlab-ce
+
+Đợi cài đặt xong, truy cập GitLab server của mình: https:// gitlabTung.ccnapnh.fun
+User đăng nhaaph là root, password lấy bằng cách chạy lệnh:
+sudo cat /etc/gitlab/initial_root_password

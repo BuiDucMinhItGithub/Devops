@@ -1,0 +1,39 @@
+cài docker
+tạo mới 1 volume để container mysql sắp tạo sẽ mount dữ liệu vào: sqlvolume 
+Chạy 1 container mysql mount vào volum đã tạo bằng lệnh:
+	sudo docker run -d --mount source=sqlvolume,target=/var/lib/mysql --name mysqlsvr1 -e 
+MYSQL_ROOT_PASSWORD=a123456 -e MYSQL_ROOT_HOST=% mysql
+vào trong container mysql vừa tạo để xe dữ liệu có không
+show database
+use database
+select * from users
+exit
+
+
+Vè lại máy ec2
+Gõ sudo docker container inspect id_container_mysql
+Tiến hành cài đặt mysql trên ec2 = lệnh sudo apt install mysql-client-core-8.0
+Sau khi cài xong chạy mysql -h ip_container_mysql -u root -p
+Gõ show database xem có gì không
+Exit
+
+Clone nodejsmysql về thư mục apiusers 
+Chạy mới 1 container coumt thư mục $HOME/apiusers ở ec2 vào thư mục /home/ubuntu trong container node 14
+Hiện tại chưa có nên cần pull về node:14
+Chú ý cổng 80:3000
+Sau dó truy cập vào container qua bin/bash
+
+sudo docker run --name nodejsweb -it -v $HOME/apiusers/nodejsmysql:/home/ubuntu -p 80:3000 node:14
+
+Sau do vào trong thư mục /home ubuntu mới vừa mount thư mục bên trên trong container 
+chỉnh sửa file server.js nhưng khả năng không được vì trong node hiện tại không cài được nano các kiểu
+Giải pháp có thể chỉnh sửa trong file server.js trong thư mục apiusers của ec2 vì đã mount nên khi thay đổi 
+bên ec2 sẽ đồng bộ bên trong container, thật vi diệu
+Sau khi chỉnh sửa thông tin của mysql vào node
+chạy lệnh node server.js để start lên
+truy cập = publicip của ec2/users để xem kết quả
+
+Muốn xem khi container mysql bị nghẻo thì dữ liệu có mất không
+Tắt container mysql đang dùng rồi tạo container mysql mới nhưng vẫn mount vào volume sqlvolume ban đầu 
+Tiến hành chỉnh sửa các bước như trên 
+truy cập lại theo đưuòng dẫn để xem 
