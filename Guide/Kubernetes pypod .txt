@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: python1
+  labels:
+    app: app1
+spec:
+  containers:
+  - name: py1
+    image: nginx #gitlab.pnh.vn:5050/tuannh/devops:latest
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    ports:
+      - containerPort: 80
