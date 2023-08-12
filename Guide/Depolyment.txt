@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd
+  labels:
+    app: httpd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      volumes:
+        - name: htdocs
+          persistentVolumeClaim:
+            claimName: pvc1
+        - name: foo
+          configMap:
+            name: mysql-connection
+        - name: bar
+          secret:
+            secretName: mysql-secret
+            optional: true
+      containers:
+        - name: app
+          image: httpd
+          resources:
+            limits:
+              memory: "50M"
+              cpu: "50m"
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: foo
+              mountPath: /etc/mysql/mysql-connection
+            - name: bar
+              mountPath: /etc/mysql/secret
+            - mountPath: /usr/local/apache2/htdocs
+              name: htdocs
+[Hình ảnh] 
