@@ -5,7 +5,7 @@ Sau đó chạy ./install.sh
 Sau khi chạy thành công sẽ có lệnh join cho worker tiến hành join cho worker 
 Rồi chạy lệnh cài mạng cho kuvernetes kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
-
+kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
 
 
 #!/bin/bash
