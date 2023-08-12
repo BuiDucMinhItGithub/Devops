@@ -1,0 +1,54 @@
+Tạo volume bên trong Pod loại: emptyDir volume để share data giữ các containers:
+Tạo folder: mkdir volumetest && cd volumetest
+nano  podvolume.yaml
+-------------------------------------------------
+apiVersion: v1
+kind: Pod
+metadata:
+  name: fortune
+spec:
+  containers:
+    - name: html-generator              # Contaienr này thay đổi dữ liệu trong volume chung
+      image: luksa/fortune
+      volumeMounts:
+        - name: html        # Mount volume vào thư mục /var/htdocs trong container 
+          mountPath: /var/htdocs
+    - name: web-server                   # container này đọc dữ liệu volume chung hiển thị thành web
+      image: nginx:alpine
+      ports:
+        - containerPort: 80
+          protocol: TCP
+      volumeMounts:
+        - name: html #  mount volume  html vào thư mục /usr/share/nginx/html bên trong container
+          mountPath: /usr/share/nginx/html
+          readOnly: true
+  volumes:   #              định nghĩa volumes
+    - name: html  #           đặt tên volumes
+      emptyDir: {}   #       định nghĩa kiểu volume là emptyDir
+
+Chạy file manifest này: kubectl apply –f podvolume.yaml
+Kiểm tra lại : kubectl get pod –o wide
+Sẽ thấy tên pod :  fortune có 2/2 container bên trong
+Truy cập thử trang web của pod: curl http://ip của pod
+Xem log: kubectl logs fortune -c web-server
+Xem bên trong Pod chạy mấy container: kubectl describe pod fortune
+Truy cập vào bên trong container html-generator
+kubectl exec fortune -c html-generator -i –t  /bin/sh
+gõ lệnh:
+ls /var/htdocs  thấy file index.html là nội dung chia sẻ với container web-server   
+tạo thêm một file mới: touch /var/htdocs/text1.txt
+sau đó exit để thoát khỏi container này.
+Truy cập sang container thứ hai để kiểm tra:
+kubectl exec fortune -c web-server -i –t   /bin/sh
+df -h      # xem thêm dung lượng
+ls /usr/share/nginx/html/
+để thấy file text1.txt đã tạo bên container kia.
+Sau khi thoát khỏi container, trên máy node bên ngoài gõ: df -h để xem dung lượng của ổ emptyDir tương ứng với giới hạn dung lượng nào.
+
+Trong trường hợp ổ chia sẻ chung giữa 2 container cần tốc độ cao thì có thể tạo emptyDir là ổ trên RAM với thông số như sau:
+
+volumes:   #              định nghĩa volumes
+    - name: html  #           đặt tên volumes
+      emptyDir:    #       định nghĩa kiểu volume là emptyDir
+        medium: "Memory"       # và là ổ trên ram
+        sizeLimit: 2Mi                  # giới hạn dung lượng
