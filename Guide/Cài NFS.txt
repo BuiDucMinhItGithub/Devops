@@ -1,0 +1,66 @@
+Lab: Triển khai tạo PV kết nối đến một máy chủ NFS chia sẻ file ( có thể là NAS thông thường)
+Cài đặt NFS server trên máy EC2 (ansible) :
+sudo apt update 
+sudo apt install nfs-kernel-server
+Tạo thư mục để chia sẻ và phân quyền mọi user được truy cập:
+sudo mkdir -p /data/mydata
+sudo chown -R nobody:nogroup /data/mydata
+sudo chmod -R 777 /data/mydata
+
+Tạo file exports để khai báo thư mục chia sẻ:
+nano /etc/exports
+và thêm dòng: 
+/data/mydata  *(rw,sync,no_subtree_check,insecure)
+Sau đó lưu lại và tiến hành chia sẻ:
+sudo exportfs -a
+
+Khởi động lại dịch vụ:
+sudo systemctl restart nfs-kernel-server
+
+Mở cổng firewall (nếu EC2 thì mở cổng Security group)
+sudo ufw allow from 0.0.0.0/0 to any port nfs
+(cho phép tất cả IP đi qua FW với port nfs – Tuy nhiên không cần gõ lệnh này do EC2 không bật ufw)
+
+
+Trên các k8s node, cần cài sudo apt install nfs-common  là NFS client để kết nối đến ổ mạng
+Bước 1: Tạo PersistentVolume NFS:
+
+Trên Master Node, tạo file : nano pv-create-nfs.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv1
+spec:
+  storageClassName: nfsstorageclass
+  capacity:
+    storage: 3Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    path: "/data/mydata/"
+    server: "172.16.13.2"       # đây là IP của EC2 CentOS NFS
+
+chạy file tạo PV này: 
+kubectl apply -f pv-create-nfs.yaml
+kubectl get pv -o wide
+kubectl describe pv/pv1
+Chú ý cột: RECLAIM POLICY là Retain:  Nghĩa là khi xóa PVC trỏ vào PV thì PV vẫn giữ nguyên dữ liệu
+Bước 2: Tạo PersistentVolumeClaim NFS:
+nano pvc-nfs.yaml
+
+apiVersion: v1
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc1
+spec:
+  storageClassName: nfsstorageclass
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 3Gi
+
+Save lại  và chạy: 
+kubectl apply -f pvc-nfs.yaml
+kubectl get pvc,pv -o wide
