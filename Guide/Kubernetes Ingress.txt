@@ -1,0 +1,114 @@
+Cài đặt Ingress Controller NGINX (Open Source):
+Theo hướng dẫn tại: https://kubernetes.github.io/ingress-nginx/deploy/ có hai cách cài:
+-	Sử dụng file manifest yaml thông thường với kubectl apply
+-	Sử dụng Helm để chạy các file yaml đã đóng gói theo chuẩn của Helm
+
+Tiến hành cài đặt Helm để sử dụng:
+curl -sSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+Sau đó cài đặt IngressController NGINX
+helm upgrade --install ingress-nginx ingress-nginx \
+  --repo https://kubernetes.github.io/ingress-nginx \
+  --namespace ingress-nginx --create-namespace
+Lệnh này sẽ tìm kiếm các file YAML Helm  ở repo https://kubernetes.github.io/ingress-nginx và cài đặt IngressController vào namespace: ingress-nginx . Xong sẽ hiện ra thông báo và hướng dẫn cách tạo Ingress. Thông tin cần chú ý nhất là IngressClassName = ???. Copy nội dung ra NotePad. 
+Kiểm tra tất cả các tài nguyên trong namespace mới tạo bằng lệnh:
+kubectl get all --namespace=ingress-nginx
+Sẽ thấy Pod, svc , deplotment, replicaset được tạo ra để chạy IngressController
+Kiểm tra mục svc: service/ingress-nginx-controller  để xem chạy NodePort nào.
+Mở Chrome và thử truy cập: http:// IP public EC2 : NodePort để xem trang Not Found mặc định 
+Với cách cài đặt này, mặc định IngressClassName = “nginx”. Do vậy khi tạo Ingress để cho phép bên ngoài truy cập được serviceA nào đấy thì phải kê khai tên class này.
+
+Tạo một namespace mới để chạy ứng dụng web httpd:
+kubectl create ns webphp
+
+Tạo một deployment bằng dòng lệnh chạy image: httpd  trong namespace vừa tạo:
+kubectl create deployment demo --image=httpd --port=80 -n webphp
+
+Và tạo tiếp service svc bằng lệnh:
+kubectl expose deployment demo -n webphp
+kubectl get all -o wide -n webphp
+Để xem tên của service là gì ????
+
+Tạo Ingress trong namespace: webphp. 
+IngressControler định kỳ truy cập mọi ns để quét xem có ingress nào có cùng IngressClassName với Controller không. Như vậy ServiceAccount chạy Pod controller phải có quyền truy cập ingress trong mọi namespace.
+nano ingressdemo.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: python-ingress
+  namespace: webphp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: "www.ccnapnh.fun"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: demo
+            port:
+              number: 80
+Lưu lại và chạy : kubectl apply -f ingressdemo.yaml
+kubectl get svc -A
+Test thử truy cập : curl -i 18.162.52.233:31992 -H 'Host: www.ccnapnh.fun'
+Trên trang quản trị tên miền DNS đã đăng ký, tạo bản ghi hostA: www trỏ vào IP: 18.162.52.233
+Sử dụng TLS/SSL để truy cập website:
+
+
+
+
+-	Lấy chứng chỉ Let’s Encrypt cho doamin của mình
+-	Tạo secrest chứa chứng chỉ số và private key
+-	Cấu hình ingress sử dụng secret TLS 
+Lấy chứng chỉ Let’s Encrypt cho doamin của mình
+
+Cài đặt sudo apt install letsencrypt
+Kiểm tra tool tự động gia hạn chứng chỉ số:
+sudo systemctl status certbot.timer
+Tạo chứng chỉ số miễn phí:
+sudo certbot certonly --standalone --agree-tos  --preferred-challenges http -d www.ccnapnh.fun -v
+Xem chứng chỉ số nhận được:
+sudo ls /etc/letsencrypt/live/www.ccnapnh.fun/
+
+Tạo secrest chứa chứng chỉ số và private key
+
+sudo - i
+cd /etc/letsencrypt/live/www.ccnapnh.fun/
+Tạo secret chứa key và cho vào namespace: webphp
+kubectl create secret tls phpsecret --key privkey.pem --cert cert.pem -n webphp
+Thoát sudo: exit 
+kubectl get secret -n webphp
+Chỉnh sửa cấu hình ingress sử dụng TLS: nano ingressdemo.yaml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: python-ingress
+  namespace: webphp
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: "www.ccnapnh.fun"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: demo
+            port:
+              number: 80
+
+  tls:
+    - hosts:
+        - www.ccnapnh.fun
+      secretName: phpsecret
+Sau đó chạy lệnh:
+kubectl apply -f ingressdemo.yaml
+
+
+
+
+Kết quả truy cập và kiểm tra chứng chỉ số của trang web thấy OK. Thời gian hơi ngắn lại phải renew lại:

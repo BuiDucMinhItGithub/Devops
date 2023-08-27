@@ -1,0 +1,2 @@
+docker volume create sqlvolume
+docker run -d --restart=always --mount source=sqlvolume,target=/var/lib/mysql --name mysqlsrv3 -e MYSQL_ROOT_PASSWORD=a123456 -e MYSQL_ROOT_HOST=% -p 3306:3306 mysql
