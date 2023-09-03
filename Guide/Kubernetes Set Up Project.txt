@@ -1,0 +1,16 @@
+Prepare ec2 to run database 
+docker create volume sqlvolume
+docker run -d --restart=always --mount source=sqlvolume,target=/var/lib/mysql --name mysqlsrv3 -e MYSQL_ROOT_PASSWORD=a123456 -e MYSQL_ROOT_HOST=% -p 3306:3306 mysql
+
+Prepare gitlab runner
+
+install helm
+create helm
+Edit values.yaml, add information to create secret for db and image pull
+Remember create template in helper for imagePullSecret
+helm template .
+helm package ...
+helm install .... file tgz -n ...
+helm upgrade --install.....
+
+kubectl rollout restart deploy deployment name -n ... 
