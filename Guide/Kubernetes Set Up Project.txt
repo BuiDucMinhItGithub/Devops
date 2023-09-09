@@ -3,7 +3,32 @@ docker create volume sqlvolume
 docker run -d --restart=always --mount source=sqlvolume,target=/var/lib/mysql --name mysqlsrv3 -e MYSQL_ROOT_PASSWORD=a123456 -e MYSQL_ROOT_HOST=% -p 3306:3306 mysql
 
 Prepare gitlab runner
+Chạy script để update và cài repository:
+sudo curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
+Sau đó tiền hành cài đặt:
+sudo apt install gitlab-runner
+Kiểm tra lại:
+gitlab-runner –version
+sudo gitlab-runner start
 
+Đăng ký Gitlab Runner với Gitlab Server: Thao tác trên Project của mình:
+Vào Gitlab -> Setting -> CICD -> Runners -> Expand -> Ấn nút: Show runner instalation instruction
+Thấy hướng dẫn đăng ký Runner với Gitab Server: (phần cài đặt đã làm rồi):
+sudo gitlab-runner register --url https://gitlab.com/ --registration-token $REGISTRATION_TOKEN
+Lựa chọn các thông số mặc định cho đến câu hỏi: Enter an executor: thì gõ docker tức là mặc định, Gitlab server sẽ yêu cầu Gitlab Runner này chạy các docker container.
+ Câu hỏi tiếp theo là: Enter the default Docker image  thì chọn image có tên là docker:dind luôn. 
+Thông báo đăng ký xong Gitlab runner
+Trên máy chạy Gitlab Runner:
+Để cho phép Gitlan Runner chạy lệnh Docker bên trong Docker container thì phải chỉnh cấu hình file (vi /etc/gitlab-runner/config.toml) cho phép các docker container chạy ở chế độ privileged mode và mount /var/run/docker.sock như một volume vào Container, để container có thể gọi lệnh docker 
+[[runners]]                      // Chú ý đến ID của Runner
+  executor = "docker"
+  [runners.docker]
+    privileged = true                      //Tìm mục này và chuyển thành true 
+    volumes = ["/var/run/docker.sock:/var/run/docker.sock", "/cache"]
+Chú ý: Phải chạy lệnh Join trên Gitlab Runner này, rồi mới chỉnh file config.toml như trên để cấu hình file toml vào đúng ID của Runner trên Gitlab
+
+
+Install cluster
 install helm
 create helm
 Edit values.yaml, add information to create secret for db and image pull
@@ -14,3 +39,21 @@ helm install .... file tgz -n ...
 helm upgrade --install.....
 
 kubectl rollout restart deploy deployment name -n ... 
+
+prepare nginx server and config nginx for L4 
+
+stream {
+    upstream app_node {
+        server 10.0.10.198:31716;
+        server 10.0.10.61:31716;
+    }
+
+    server {
+        listen 443;
+        proxy_pass app_node;
+    }
+}
+
+nginx -s reload 
+ngĩn restart
+Switch domain to public ip of Nginx server
