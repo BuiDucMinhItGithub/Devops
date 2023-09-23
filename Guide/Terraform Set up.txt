@@ -1,0 +1,65 @@
+Các bước cài đặt Terraform: (Chức năng aws tương đương terraform là AWS CloudFormation)
+Link hướng dẫn cài terraform: https://learn.hashicorp.com/tutorials/terraform/install-cli
+
+Chuẩn bị máy EC2 và tiến hành cài đặt:
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+
+sudo apt-get update && sudo apt-get install terraform
+Kiểm tra lại:  terraform --version
+(hoặc cài sudo snap install terraform –classic)
+Với máy chạy Windows: download Terraform.exe về và Copy vào thư mục  C:\Windows\System32
+
+Cài đặt AWS CLI lên máy EC2 ubuntu
+Terraform sử dụng chung file cấu hình với aws cli
+Tạo thư mục: mkdir -p ~/aws
+cd  ~/aws
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+sudo apt install unzip
+unzip awscliv2.zip
+
+sudo apt install awscli
+sudo ./aws/install
+aws --version
+Đến đây đăng nhập aws cli trực tiếp gõ lệnh: 
+aws configure
+Chú ý: Vào AWS -> IAM chọn user -> Security Credential để lấy Access Key và Secret mới nếu quên
+Default region name [None]: ap-east-1
+Default output format [None]:
+Sau khi đăng nhập thì xem file cridentials mới được tạo ra:
+cat /home/ubuntu/.aws/credentials
+File này sẽ được Terraform (cũng như aws cli) sử dụng để đăng nhập vào AWS tạo EC2, VPC thay cho người dùng
+
+Tạo thư mục chứa Code để sử dụng Terraform deploy máy ảo EC2 
+
+mkdir ec2terraform
+cd ec2terraform
+
+nano main.tf
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.27"
+    }
+  }
+
+  required_version = ">= 0.14.9"
+}
+
+provider "aws" {
+  profile = "default"
+  region  = " ap-east-1"
+  # shared_credentials_file = “/home/ubuntu/.aws/credentials"
+}
+
+resource "aws_instance" "app_server" {
+  ami           = "ami-0f2ea204cd818ce8e"
+  instance_type = "t3.micro"
+
+  tags = {
+    Name = "EC2terraform"
+  }
+}
