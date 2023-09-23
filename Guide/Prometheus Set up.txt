@@ -1,0 +1,82 @@
+Cài đặt Prometheus trên cluster Kubernetes ( Sử dụng Helm Chart do Prometheus cung cấp)
+Trên Master:
+curl -sSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+Cài đặt:
+helm install prometheus-srv prometheus-community/prometheus  -n loki –create-namespace
+Đợi một chút và kiểm tra:
+kubectl get pod -n loki
+
+Cài NFS server trên một máy EC2 khác cùng subnet và chia sẻ 03 thư mục:
+sudo mkdir -p /data/metricdata
+sudo mkdir -p /data/metricserver
+sudo mkdir -p /data/loki          (thư mục này để bài sau lưu trữ Logs cho Loki)
+
+sudo apt install nfs-kernel-server           
+
+Phân quyền lại cho 3 thư mục sự kiến chia sẻ NFS
+sudo chown -R nobody:nogroup /data/metricdata/
+sudo chown -R nobody:nogroup /data/metricserver/
+sudo chown -R nobody:nogroup /data/loki
+sudo chmod -R 777 /data/metricdata/
+sudo chmod -R 777 /data/metricserver/
+sudo chmod -R 777 /data/loki
+
+Chỉnh sửa file export
+nano /etc/exports
+Thêm nội dung như sau
+/data/metricdata  *(rw,sync,no_subtree_check,insecure)
+/data/metricserver  *(rw,sync,no_subtree_check,insecure)
+/data/loki  *(rw,sync,no_subtree_check,insecure)
+Lưu lại và tiến hành chia sẻ file NFS
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+sudo ufw allow from 0.0.0.0/0 to any port nfs
+Kiểm tra lại: showmount –e
+Trên các máy worker cần cài : sudo  apt-get install nfs-common
+
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvmetricsrv
+spec:
+  storageClassName:
+  capacity:
+    storage: 200Gi
+  accessModes:
+    - ReadWriteOnce
+  nfs:
+    path: "/data/metricserver/"
+    server: "192.168.1.185"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvmetricdata
+spec:
+  storageClassName:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  nfs:
+    path: "/data/metricdata/"
+    server: "192.168.1.185"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvloki
+spec:
+  storageClassName: nfs-client
+  capacity:
+    storage: 120Gi
+  accessModes:
+    - ReadWriteOnce
+  nfs:
+    path: "/data/loki/"
+    server: "192.168.1.185"
